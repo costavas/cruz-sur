@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Cruz del Sur Interactiva</title>
+    <meta charset="UTF-8">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        body { 
+            margin: 0; 
+            background-color: black;
+            overflow: hidden;
+        }
+        canvas { 
+            display: block; 
+        }
+        #info {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            font-family: Arial, sans-serif;
+            background: rgba(0,0,0,0.7);
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 18px;
+            pointer-events: none;
+            z-index: 100;
+        }
+    </style>
+</head>
+<body>
+    <div id="info">Cruz del Sur - Arrastra para rotar, rueda del mouse para zoom</div>
+    <script>
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 2000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        const stars = [
+            [12.44333, -63.09917, 321, 0xFFFFFF, 'α'],
+            [12.79528, -59.68861, 352, 0xB0C4DE, 'β'],
+            [12.51944, -57.11306, 88, 0xFFA500, 'γ'],
+            [12.25250, -58.74889, 364, 0xADD8E6, 'δ']
+        ];
+
+        function createStar(ra, dec, dist, color, letter, size) {
+            const group = new THREE.Group();
+            
+            const geometry = new THREE.SphereGeometry(size, 32, 32);
+            const material = new THREE.MeshBasicMaterial({ color: color });
+            const star = new THREE.Mesh(geometry, material);
+            
+            const raRad = ra * 15 * Math.PI/180;
+            const decRad = dec * Math.PI/180;
+            const x = dist * Math.cos(decRad) * Math.cos(raRad) / 15;
+            const y = dist * Math.cos(decRad) * Math.sin(raRad) / 15;
+            const z = dist * Math.sin(decRad) / 15;
+            
+            star.position.set(x, y, z);
+            group.add(star);
+
+            // Calcular el tamaño de la letra basado en la distancia
+            const baseSize = 40;
+            const distanceScale = dist / 352; // Normalizado a la distancia de Mimosa
+            let fontSize = baseSize;
+            
+            // Ajuste especial para Gacrux
+            if (dist < 100) { // Si es Gacrux
+                fontSize = baseSize * 0.6; // Reducir significativamente
+            } else {
+                fontSize = baseSize * Math.sqrt(distanceScale); // Escala suave para las demás
+            }
+
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            canvas.width = 64;
+            canvas.height = 64;
+            context.fillStyle = 'white';
+            context.font = `bold ${fontSize}px Arial`;
+            context.textAlign = 'center';
+            context.textBaseline = 'middle';
+            context.fillText(letter, 32, 32);
+
+            const texture = new THREE.CanvasTexture(canvas);
+            const spriteMaterial = new THREE.SpriteMaterial({ map: texture });
+            const sprite = new THREE.Sprite(spriteMaterial);
+            
+            // Ajustar la posición y escala del sprite según la distancia
+            const offsetScale = dist < 100 ? 0.3 : 0.5;
+            sprite.position.set(x + offsetScale, y + offsetScale, z + offsetScale);
+            
+            // Escalar el sprite según la distancia
+            const spriteScale = dist < 100 ? 1.0 : 1.5;
+            sprite.scale.set(spriteScale, spriteScale, spriteScale);
+            
+            group.add(sprite);
+
+            return { group, position: new THREE.Vector3(x, y, z) };
+        }
+
+        const starObjects = [];
+        const starPositions = [];
+        stars.forEach((star, i) => {
+            const size = (i === 2) ? 0.15 : 0.2;
+            const { group, position } = createStar(...star, size);
+            scene.add(group);
+            starObjects.push(group);
+            starPositions.push(position);
+        });
+
+        function createLine(start, end) {
+            const material = new THREE.LineBasicMaterial({ 
+                color: 0xff0000,
+                linewidth: 2
+            });
+            const geometry = new THREE.BufferGeometry().setFromPoints([start, end]);
+            return new THREE.Line(geometry, material);
+        }
+
+        scene.add(createLine(starPositions[0], starPositions[2]));
+        scene.add(createLine(starPositions[1], starPositions[3]));
+
+        camera.position.z = 50;
+        scene.rotation.x = Math.PI / 6;
+
+        let isDragging = false;
+        let previousMousePosition = { x: 0, y: 0 };
+        let targetRotationX = Math.PI / 6;
+        let targetRotationY = 0;
+        let currentRotationX = Math.PI / 6;
+        let currentRotationY = 0;
+
+        document.addEventListener('mousedown', (e) => {
+            isDragging = true;
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (isDragging) {
+                const deltaMove = {
+                    x: e.offsetX - previousMousePosition.x,
+                    y: e.offsetY - previousMousePosition.y
+                };
+
+                targetRotationY += deltaMove.x * 0.01;
+                targetRotationX += deltaMove.y * 0.01;
+            }
+            previousMousePosition = {
+                x: e.offsetX,
+                y: e.offsetY
+            };
+        });
+
+        document.addEventListener('mouseup', () => {
+            isDragging = false;
+        });
+
+        // Zoom sin ningún límite
+        document.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            const zoomSpeed = 0.05;
+            camera.position.z *= (1 + Math.sign(e.deltaY) * zoomSpeed);
+        });
+
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            currentRotationX += (targetRotationX - currentRotationX) * 0.1;
+            currentRotationY += (targetRotationY - currentRotationY) * 0.1;
+            
+            scene.rotation.x = currentRotationX;
+            scene.rotation.y = currentRotationY;
+
+            starObjects.forEach(group => {
+                if (group.children[1]) {
+                    group.children[1].lookAt(camera.position);
+                }
+            });
+            
+            renderer.render(scene, camera);
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        animate();
+    </script>
+</body>
+</html>
