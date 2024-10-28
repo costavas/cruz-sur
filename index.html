@@ -1,6 +1,12 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <!--
+    Southern Cross 3D Interactive Visualization
+    Created by Constantino Baikouzis
+    Website: https://two24.webnode.es
+    All rights reserved
+-->
     <title>Cruz del Sur Interactiva</title>
     <meta charset="UTF-8">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -28,8 +34,17 @@
         }
     </style>
 </head>
-<body>
-    <div id="info">Cruz del Sur - Arrastra para rotar, rueda del mouse para zoom</div>
+<div style="position: fixed; bottom: 10px; right: 10px; color: white; font-family: Arial; font-size: 12px; pointer-events: none;">
+    © 2024 Constantino Baikouzis
+</div>
+    <body>
+    <div id="info">
+    Southern Cross - Drag to rotate, mouse wheel to zoom<br>
+    <span style="font-size: 14px; opacity: 0.8;">
+    This simulation was designed by Constantino Baikouzis<br>
+    <a href="https://two24.webnode.es" style="color: #aaf;" target="_blank">https://two24.webnode.es</a>
+    </span>
+</div>
     <script>
         const scene = new THREE.Scene();
         const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 2000);
