@@ -39,7 +39,7 @@
 </div>
     <body>
     <div id="info">
-    Southern Cross - Drag to rotate, mouse wheel to zoom<br>
+    Southern Cross - Drag/touch to rotate, pinch/wheel to zoom<br>
     <span style="font-size: 14px; opacity: 0.8;">
     This simulation was designed by Constantino Baikouzis<br>
     <a href="https://two24.webnode.es" style="color: #aaf;" target="_blank">https://two24.webnode.es</a>
@@ -139,13 +139,14 @@
         camera.position.z = 50;
         scene.rotation.x = Math.PI / 6;
 
-        let isDragging = false;
+       let isDragging = false;
         let previousMousePosition = { x: 0, y: 0 };
         let targetRotationX = Math.PI / 6;
         let targetRotationY = 0;
         let currentRotationX = Math.PI / 6;
         let currentRotationY = 0;
 
+        // Mouse controls
         document.addEventListener('mousedown', (e) => {
             isDragging = true;
         });
@@ -156,7 +157,6 @@
                     x: e.offsetX - previousMousePosition.x,
                     y: e.offsetY - previousMousePosition.y
                 };
-
                 targetRotationY += deltaMove.x * 0.01;
                 targetRotationX += deltaMove.y * 0.01;
             }
@@ -164,6 +164,67 @@
                 x: e.offsetX,
                 y: e.offsetY
             };
+        });
+
+        document.addEventListener('mouseup', () => {
+            isDragging = false;
+        });
+
+        // Touch controls
+        document.addEventListener('touchstart', (e) => {
+            previousMousePosition = {
+                x: e.touches[0].clientX,
+                y: e.touches[0].clientY
+            };
+        }, {passive: false});
+
+        document.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            const deltaMove = {
+                x: e.touches[0].clientX - previousMousePosition.x,
+                y: e.touches[0].clientY - previousMousePosition.y
+            };
+            
+            targetRotationY += deltaMove.x * 0.01;
+            targetRotationX += deltaMove.y * 0.01;
+            
+            previousMousePosition = {
+                x: e.touches[0].clientX,
+                y: e.touches[0].clientY
+            };
+        }, {passive: false});
+
+        // Pinch zoom for mobile
+        let initialPinchDistance = null;
+        let initialCameraZ = null;
+
+        document.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 2) {
+                initialPinchDistance = Math.hypot(
+                    e.touches[0].clientX - e.touches[1].clientX,
+                    e.touches[0].clientY - e.touches[1].clientY
+                );
+                initialCameraZ = camera.position.z;
+            }
+        });
+
+        document.addEventListener('touchmove', (e) => {
+            if (e.touches.length === 2) {
+                const currentDistance = Math.hypot(
+                    e.touches[0].clientX - e.touches[1].clientX,
+                    e.touches[0].clientY - e.touches[1].clientY
+                );
+                
+                if (initialPinchDistance && initialCameraZ) {
+                    const distanceRatio = initialPinchDistance / currentDistance;
+                    camera.position.z = initialCameraZ * distanceRatio;
+                }
+            }
+        });
+
+        document.addEventListener('touchend', () => {
+            initialPinchDistance = null;
+            initialCameraZ = null;
         });
 
         document.addEventListener('mouseup', () => {
